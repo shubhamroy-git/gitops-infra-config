@@ -1,0 +1,62 @@
+# THE WRAPPER
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-catalog-api
+  namespace: default
+  labels:
+    app: product-catalog-api
+#THE CORE SPEC
+spec:
+  replicas: 3 # Tells Kubernetes to always keep 3 instances running across the cluster
+  selector:
+    matchLabels:
+      app: product-catalog-api
+  strategy:
+    type: RollingUpdate # Ensures zero-downtime upgrades by swapping containers one-by-one
+    rollingUpdate:
+      maxSurge: 1       # Allows 1 extra container above the replica count during an update
+      maxUnavailable: 0 # Ensures no containers are dropped until new ones pass health checks
+  # HERE IT BEGINS: actual container and its settings
+  template:
+    metadata:
+      labels:
+        app: product-catalog-api
+    
+    spec:
+      containers:
+      - name: api
+        image: product-catalog-api:1.0.0 # Matches the Docker tag we built in Step 2
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080 # Matches the internal port exposed in the Dockerfile
+          name: http
+        # Production Resource Bounds (Prevents noisy neighbors from crashing nodes)
+        #PROFESH
+        resources:
+          limits:
+            cpu: "500m"     # Max cap: 0.5 of a CPU core
+            memory: "256Mi" # Max cap: 256 Megabytes
+          requests:
+            cpu: "100m"     # Guaranteed reservation on startup: 0.1 of a core
+            memory: "128Mi" # Guaranteed reservation on startup: 128 Megabytes
+        
+        # Liveness Probe: Tells Kubernetes if the app process has crashed or deadlocked
+        livenessProbe:
+          httpGet:
+            path: /healthz/live
+            port: 8080
+          initialDelaySeconds: 5 # Wait 5 seconds after startup before checking
+          periodSeconds: 10      # Check every 10 seconds
+          timeoutSeconds: 2      # Must respond within 2 seconds
+          failureThreshold: 3    # Restart the container if it fails 3 times consecutively
+
+        # Readiness Probe: Tells Kubernetes if the app is fully ready to accept user web traffic
+        readinessProbe:
+          httpGet:
+            path: /healthz/ready
+            port: 8080
+          initialDelaySeconds: 10 # Wait 10 seconds for database connections to warm up
+          periodSeconds: 10       # Check every 10 seconds
+          timeoutSeconds: 5       # Must respond within 5 seconds
+          failureThreshold: 2     # Pull container out of rotation if it fails 2 times

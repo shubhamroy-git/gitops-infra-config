@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-catalog-service
+  namespace: default
+spec:
+  type: ClusterIP # Standard internal cloud-native load-balancer
+  ports:
+  - port: 80        # The public/internal port exposed inside the cluster
+    targetPort: 8080 # The exact backend container port the Service routes traffic to
+    protocol: TCP
+    name: http
+  selector:
+    app: product-catalog-api # Tells the service to forward traffic to pods with this label
