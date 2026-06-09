@@ -26,7 +26,7 @@ spec:
     spec:
       containers:
       - name: api
-        image: shubd0cker/product-catalog-api:6
+        image: shubd0cker/product-catalog-api:11
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080 # Matches the internal port exposed in the Dockerfile
